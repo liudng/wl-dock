@@ -1,0 +1,74 @@
+#include "DockController.h"
+
+#include "DockWindow.h"
+#include "ForeignToplevelManager.h"
+#include "DesktopIconResolver.h"
+
+#include <QGuiApplication>
+#include <QScreen>
+#include <QWindow>
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(logCtrl, "dock.ctrl", QtWarningMsg)
+
+DockController::DockController(QObject *parent)
+    : QObject(parent) {}
+
+DockController::~DockController()
+{
+    delete m_resolver; // 非 QObject，需手动释放
+}
+
+bool DockController::init()
+{
+    m_resolver = new DesktopIconResolver();
+    m_manager = new ForeignToplevelManager(this);
+
+    if (!m_manager->connectToDisplay()) {
+        qCWarning(logCtrl) << "failed to connect foreign-toplevel manager";
+        return false;
+    }
+
+    for (QScreen *s : QGuiApplication::screens())
+        addScreen(s);
+
+    connect(qGuiApp, &QGuiApplication::screenAdded,
+            this, &DockController::addScreen);
+    connect(qGuiApp, &QGuiApplication::screenRemoved,
+            this, [this](QScreen *s) { removeScreen(s); });
+
+    return true;
+}
+
+void DockController::addScreen(QScreen *screen)
+{
+    if (!screen) return;
+    if (m_docks.contains(screen)) return;
+    // 跳过 placeholder screen（切换 TTY 时 Qt 临时创建的空屏幕）
+    if (screen->name().isEmpty() || screen->geometry().isEmpty()) {
+        qCWarning(logCtrl) << "skipping invalid screen name=" << screen->name()
+                           << "geometry=" << screen->geometry();
+        return;
+    }
+
+    auto w = new DockWindow(m_manager, m_resolver, screen);
+    // 在 show() 之前强制创建 native window，以便正确设置 screen
+    w->winId();
+    if (QWindow *win = w->windowHandle()) {
+        win->setScreen(screen);
+    }
+    w->show();
+    w->setupLayerShell();
+    m_docks.insert(screen, w);
+    qCWarning(logCtrl) << "added dock for screen" << screen->name()
+                       << "geometry=" << screen->geometry();
+}
+
+void DockController::removeScreen(QScreen *screen)
+{
+    const auto it = m_docks.find(screen);
+    if (it == m_docks.end()) return;
+    it.value()->deleteLater();
+    m_docks.erase(it);
+    qCInfo(logCtrl) << "removed dock for screen" << (screen ? screen->name() : QString());
+}
