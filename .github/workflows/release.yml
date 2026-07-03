@@ -1,5 +1,8 @@
 name: Release
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
@@ -16,6 +19,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            build-${{ matrix.os }}-${{ matrix.arch }}
+          key: ${{ runner.os }}-build-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ matrix.os }}-${{ matrix.arch }}-
 
       - name: Enable QEMU emulation
         uses: docker/setup-qemu-action@v3
@@ -45,7 +57,7 @@ jobs:
               apt-get update
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake pkgconf qt6-base-dev qt6-wayland-dev wayland-protocols liblayershellqtinterface-dev
             else
-              dnf -y install gcc-c++ cmake pkgconf qt6-qtbase-devel qt6-qtwayland-devel wayland-protocols-devel layer-shell-qt-devel --setopt=install_weak_deps=False
+              dnf --setopt=install_weak_deps=False -y install gcc-c++ cmake pkgconf qt6-qtbase-devel qt6-qtwayland-devel wayland-protocols-devel layer-shell-qt-devel
             fi
             mkdir -p "$BUILD_DIR"
             cd "$BUILD_DIR"
