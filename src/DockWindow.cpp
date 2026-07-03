@@ -21,7 +21,7 @@ Q_LOGGING_CATEGORY(logDock, "dock.window", QtWarningMsg)
 
 static constexpr int DOCK_H = 64;          // Dock 完整高度
 static constexpr int HIDDEN_H = 1;         // 隐藏时高度（1px，仍可接收鼠标事件）
-static constexpr int HIDE_DELAY_MS = 100; // 鼠标离开后延迟隐藏的时间
+static constexpr int HIDE_DELAY_MS = 50;   // 鼠标离开后延迟隐藏的时间
 
 DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *resolver,
                        QScreen *targetScreen, QWidget *parent)
@@ -40,7 +40,7 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
 
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 6, 0, 6);
-    layout->setSpacing(10);
+    layout->setSpacing(0);
 
     layout->addStretch();
 
@@ -48,7 +48,7 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
     layout->addWidget(m_taskManager);
 
     m_clock = new ClockWidget(this);
-    m_clock->setFixedWidth(100);
+    m_clock->setFixedWidth(90);
     layout->addWidget(m_clock);
 
     layout->addStretch();

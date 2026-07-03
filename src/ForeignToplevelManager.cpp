@@ -25,7 +25,14 @@ ForeignToplevelManager::~ForeignToplevelManager()
         wl_seat_destroy(m_seat);
         m_seat = nullptr;
     }
-    // 先释放所有 handle 代理
+
+    // 先释放所有 handle 代理，避免残留 handle 造成资源泄漏
+    for (Handle *h : m_byWl) {
+        if (h->wlHandle) {
+            zwlr_foreign_toplevel_handle_v1_destroy(h->wlHandle);
+            h->wlHandle = nullptr;
+        }
+    }
     qDeleteAll(m_byWl);
     m_byWl.clear();
     m_byId.clear();
@@ -67,8 +74,8 @@ bool ForeignToplevelManager::connectToDisplay()
     // 第二次 roundtrip：接收已存在的 toplevel 的初始事件
     wl_display_roundtrip(m_display);
 
-    qCWarning(logFtm) << "connected; toplevels after roundtrip:" << m_byId.size()
-                      << "seat:" << (m_seat ? "yes" : "no");
+    qCInfo(logFtm) << "connected; toplevels after roundtrip:" << m_byId.size()
+                     << "seat:" << (m_seat ? "yes" : "no");
 
     const int fd = wl_display_get_fd(m_display);
     m_readNotifier = new QSocketNotifier(fd, QSocketNotifier::Read, this);
@@ -241,9 +248,9 @@ void ForeignToplevelManager::handleDone(void *data, zwlr_foreign_toplevel_handle
     auto self = h->manager;
     if (!h->announced) {
         h->announced = true;
-        qCWarning(logFtm) << "toplevel done (first): id=" << h->id
-                          << "appId=" << h->info.appId << "title=" << h->info.title
-                          << "activated=" << h->info.activated;
+        qCInfo(logFtm) << "toplevel done (first): id=" << h->id
+                       << "appId=" << h->info.appId << "title=" << h->info.title
+                       << "activated=" << h->info.activated;
         emit self->toplevelAdded(h->id, h->info);
     } else {
         emit self->toplevelChanged(h->id, h->info);

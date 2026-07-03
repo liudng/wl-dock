@@ -16,6 +16,8 @@ DockController::DockController(QObject *parent)
 
 DockController::~DockController()
 {
+    qDeleteAll(m_docks);
+    m_docks.clear();
     delete m_resolver; // 非 QObject，需手动释放
 }
 
@@ -60,8 +62,8 @@ void DockController::addScreen(QScreen *screen)
     w->show();
     w->setupLayerShell();
     m_docks.insert(screen, w);
-    qCWarning(logCtrl) << "added dock for screen" << screen->name()
-                       << "geometry=" << screen->geometry();
+    qCInfo(logCtrl) << "added dock for screen" << screen->name()
+                    << "geometry=" << screen->geometry();
 }
 
 void DockController::removeScreen(QScreen *screen)

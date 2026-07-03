@@ -46,20 +46,8 @@ void ClockWidget::refresh()
     const QDateTime now = QDateTime::currentDateTime();
     m_time->setText(now.toString("HH:mm"));
 
-    // 下行：YYYY/MM/DD 中文星期几
-    static const char *kDays[] = {
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe4\xb8\x80", // 星期一
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe4\xba\x8c", // 星期二
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe4\xb8\x89", // 星期三
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe5\x9b\x9b", // 星期四
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe4\xba\x94", // 星期五
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe5\x85\xad", // 星期六
-        "\xe6\x98\x9f\xe6\x9c\x9f\xe6\x97\xa5"  // 星期日
-    };
-    const int dow = now.date().dayOfWeek(); // 1=Mon .. 7=Sun
-    QString dateStr = now.toString("yyyy/MM/dd ");
-    if (dow >= 1 && dow <= 7)
-        dateStr += QString::fromUtf8(kDays[dow - 1]);
+    const QString dateStr = now.toString("yyyy/MM/dd ") +
+        QLocale::system().dayName(now.date().dayOfWeek(), QLocale::ShortFormat);
     m_date->setText(dateStr);
 
     scheduleNextMinute();

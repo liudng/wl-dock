@@ -27,12 +27,35 @@ QStringList DesktopIconResolver::searchDirs() const
     return dirs;
 }
 
+static bool isDesktopLineComment(const QString &line)
+{
+    const QString trimmed = line.trimmed();
+    return trimmed.startsWith('#') || trimmed.startsWith(';');
+}
+
+static QString desktopEntryKey(const QString &line)
+{
+    const int eq = line.indexOf('=');
+    if (eq <= 0)
+        return {};
+    return line.left(eq).trimmed();
+}
+
+static QString desktopEntryValue(const QString &line)
+{
+    const int eq = line.indexOf('=');
+    if (eq < 0)
+        return {};
+    return line.mid(eq + 1).trimmed();
+}
+
 QString DesktopIconResolver::findDesktopFile(const QString &appId) const
 {
     if (appId.isEmpty())
         return {};
 
-    const QStringList dirs = searchDirs();
+    QStringList dirs = searchDirs();
+    dirs.removeDuplicates();
     const QString target = appId + ".desktop";
 
     // 1. 文件名精确匹配
@@ -52,45 +75,50 @@ QString DesktopIconResolver::findDesktopFile(const QString &appId) const
         }
     }
 
-    // 3. StartupWMClass 匹配
+    // 3. StartupWMClass 或 DesktopEntry 内匹配
     for (const QString &dir : dirs) {
         QDir d(dir);
         if (!d.exists()) continue;
         for (const QString &f : d.entryList(QStringList() << "*.desktop", QDir::Files)) {
-            QFile file(dir + "/" + f);
-            if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-                continue;
-            QTextStream ts(&file);
-            for (const QString &line : ts.readAll().split('\n')) {
-                if (line.startsWith("StartupWMClass=", Qt::CaseInsensitive)) {
-                    const QString val = line.mid(QString("StartupWMClass=").length()).trimmed();
-                    if (!val.isEmpty() && val == appId)
-                        return dir + "/" + f;
-                }
-            }
+            const QString path = dir + "/" + f;
+            const QString value = readDesktopEntryValue(path, QStringLiteral("StartupWMClass"));
+            if (!value.isEmpty() && value == appId)
+                return path;
         }
     }
     return {};
 }
 
-QString DesktopIconResolver::readIconValue(const QString &path)
+QString DesktopIconResolver::readDesktopEntryValue(const QString &path, const QString &key)
 {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return {};
     QTextStream ts(&file);
     bool inDesktopEntry = false;
-    for (const QString &line : ts.readAll().split('\n')) {
-        if (line.startsWith('[')) {
-            inDesktopEntry = (line.trimmed() == "[Desktop Entry]");
+    while (!ts.atEnd()) {
+        const QString line = ts.readLine();
+        if (line.trimmed().isEmpty() || isDesktopLineComment(line))
+            continue;
+        const QString trimmed = line.trimmed();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            inDesktopEntry = (trimmed.compare("[Desktop Entry]", Qt::CaseInsensitive) == 0);
             continue;
         }
         if (!inDesktopEntry)
             continue;
-        if (line.startsWith("Icon=", Qt::CaseInsensitive))
-            return line.mid(5).trimmed();
+        const QString name = desktopEntryKey(trimmed);
+        if (name.isEmpty())
+            continue;
+        if (name.compare(key, Qt::CaseInsensitive) == 0)
+            return desktopEntryValue(trimmed);
     }
     return {};
+}
+
+QString DesktopIconResolver::readIconValue(const QString &path)
+{
+    return readDesktopEntryValue(path, QStringLiteral("Icon"));
 }
 
 QIcon DesktopIconResolver::loadFromIconNameOrPath(const QString &nameOrPath) const

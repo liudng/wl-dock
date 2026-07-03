@@ -15,6 +15,7 @@ public:
 private:
     QStringList searchDirs() const;
     QString findDesktopFile(const QString &appId) const;
+    static QString readDesktopEntryValue(const QString &path, const QString &key);
     static QString readIconValue(const QString &path);
     QIcon loadFromIconNameOrPath(const QString &nameOrPath) const;
     static QIcon defaultIcon();
