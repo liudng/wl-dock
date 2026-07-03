@@ -3,7 +3,7 @@ name: Build Builder Images
 on:
   push:
     branches:
-      - main
+      - build-images
   workflow_dispatch: {}
 
 jobs:
