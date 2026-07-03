@@ -43,9 +43,9 @@ jobs:
             set -euo pipefail
             if grep -qi "debian" /etc/os-release; then
               apt-get update
-              DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake pkgconf qt6-base-dev qt6-wayland-dev wayland-protocols liblayershellqtinterface-dev
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake pkgconf qt6-base-dev qt6-wayland-dev wayland-protocols liblayershellqtinterface-dev
             else
-              dnf -y install gcc-c++ cmake pkgconf qt6-qtbase-devel qt6-qtwayland-devel wayland-protocols-devel layer-shell-qt-devel
+              dnf -y install gcc-c++ cmake pkgconf qt6-qtbase-devel qt6-qtwayland-devel wayland-protocols-devel layer-shell-qt-devel --setopt=install_weak_deps=False
             fi
             mkdir -p "$BUILD_DIR"
             cd "$BUILD_DIR"
