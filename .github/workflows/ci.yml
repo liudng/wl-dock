@@ -13,13 +13,13 @@ jobs:
       matrix:
         include:
           - os: debian-13
-            arch: x86_64
+            arch: amd64
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:debian-trixie
           - os: debian-13
             arch: arm64
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:debian-trixie
           - os: fedora-42
-            arch: x86_64
+            arch: amd64
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:fedora-42
           - os: fedora-42
             arch: arm64
