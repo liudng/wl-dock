@@ -16,7 +16,7 @@ apt install qt6-base-dev qt6-tools-dev qt6-wayland-dev wayland-protocols liblaye
 ### Runtime dependencies
 
 ```
-apt install layer-shell-qt
+apt install layer-shell-qt liblayershellqtinterface6
 ```
 
 ### Build

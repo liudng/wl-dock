@@ -12,7 +12,7 @@ TaskManager::TaskManager(DesktopIconResolver *resolver, QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     m_layout = new QHBoxLayout(this);
     m_layout->setContentsMargins(0, 0, 0, 0);
-    m_layout->setSpacing(4);
+    m_layout->setSpacing(0);
 }
 
 void TaskManager::onToplevelAdded(quint32 id, const ToplevelInfo &info)

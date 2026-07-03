@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
     LayerShellQt::Shell::useLayerShell();
 
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("wlroots-dock"));
-    QApplication::setApplicationDisplayName(QStringLiteral("wlroots Dock"));
+    QApplication::setApplicationName(QStringLiteral("wl-dock"));
+    QApplication::setApplicationDisplayName(QStringLiteral("wl-dock"));
     // 切换 TTY 时所有 output 会被移除再恢复，禁止最后窗口关闭时退出
     QApplication::setQuitOnLastWindowClosed(false);
 
