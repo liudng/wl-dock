@@ -52,11 +52,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ccache-${{ matrix.arch }}-
 
-      - name: Enable QEMU emulation
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-
       - name: Build in container
         run: |
           set -euo pipefail
