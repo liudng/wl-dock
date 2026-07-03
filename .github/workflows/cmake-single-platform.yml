@@ -18,6 +18,9 @@ jobs:
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
+    # 2. 核心步骤：指定构建容器为 Debian 13 (Trixie)
+    container:
+      image: debian:trixie # 或 docker.io/library/debian:trixie[reference:4]
 
     steps:
     - uses: actions/checkout@v4
