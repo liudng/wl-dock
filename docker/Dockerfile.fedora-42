@@ -1,0 +1,18 @@
+FROM fedora:42
+
+RUN dnf -y --setopt=install_weak_deps=False install \
+    @development-tools \
+    ccache \
+    cmake \
+    ninja-build \
+    pkgconf \
+    qt6-qtbase-devel \
+    qt6-qtwayland-devel \
+    wayland-protocols-devel \
+    layer-shell-qt-devel \
+  && dnf -y clean all && rm -rf /var/cache/dnf
+
+ENV CCACHE_DIR=/root/.ccache
+ENV CCACHE_MAXSIZE=1G
+
+WORKDIR /workspace
