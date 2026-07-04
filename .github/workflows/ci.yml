@@ -25,13 +25,6 @@ jobs:
             arch: arm64
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:fedora-42
 
-    container:
-      image: ${{ matrix.builder }}
-      options: --platform=linux/${{ matrix.arch }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -52,17 +45,37 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ccache-${{ matrix.arch }}-
 
+      - name: Set up QEMU for arm64
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build in container
         run: |
           set -euo pipefail
-          build_dir=build-${{ matrix.os }}-${{ matrix.arch }}
-          mkdir -p "$HOME/.ccache"
-          mkdir -p "$build_dir"
-          cd "$build_dir"
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
-          ninja -j$(nproc)
+          docker pull "${{ matrix.builder }}"
+          docker run --rm --platform=linux/${{ matrix.arch }} \
+            -v "${{ github.workspace }}":/github/workspace \
+            -v "${HOME}/.ccache":/root/.ccache \
+            -w /github/workspace \
+            "${{ matrix.builder }}" \
+            bash -lc 'set -euo pipefail
+              build_dir=build-${{ matrix.os }}-${{ matrix.arch }}
+              mkdir -p "$HOME/.ccache"
+              mkdir -p "$build_dir"
+              cd "$build_dir"
+              cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+              ninja -j$(nproc)'
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
