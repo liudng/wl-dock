@@ -28,15 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            build-${{ matrix.os }}-${{ matrix.arch }}
-          key: ${{ runner.os }}-build-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.os }}-${{ matrix.arch }}-
-
       - name: Set up QEMU for arm64
         if: matrix.arch == 'arm64'
         uses: docker/setup-qemu-action@v3
