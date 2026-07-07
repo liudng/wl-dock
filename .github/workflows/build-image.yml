@@ -3,7 +3,9 @@ name: Build Builder Images
 on:
   push:
     branches:
-      - build-images
+      - main
+    paths:
+      - docker/**
   workflow_dispatch: {}
 
 jobs:
