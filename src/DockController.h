@@ -7,6 +7,7 @@ class QScreen;
 class ForeignToplevelManager;
 class DesktopIconResolver;
 class DockWindow;
+class SniWatcher;
 
 // 顶层协调者：创建共享的 ForeignToplevelManager 与 DesktopIconResolver，
 // 并为每个显示器创建一个 DockWindow（单进程多窗口）。
@@ -19,11 +20,14 @@ public:
 
     bool init();
 
+    SniWatcher *sniWatcher() const { return m_sni; }
+
 private:
     void addScreen(QScreen *screen);
     void removeScreen(QScreen *screen);
 
     ForeignToplevelManager *m_manager = nullptr;
     DesktopIconResolver *m_resolver = nullptr;
+    SniWatcher *m_sni = nullptr;
     QHash<QScreen *, DockWindow *> m_docks;
 };

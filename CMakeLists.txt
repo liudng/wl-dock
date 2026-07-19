@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 set(QT_MIN_VERSION 6.4)
-find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets DBus)
 find_package(LayerShellQt REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -44,6 +44,10 @@ set(SOURCES
     src/DockWindow.cpp
     src/DockController.cpp
     src/DockTip.cpp
+    src/sni/SniItem.cpp
+    src/sni/SniWatcher.cpp
+    src/sni/SniIconButton.cpp
+    src/sni/SniTrayWidget.cpp
     ${GEN_SOURCE}
 )
 
@@ -56,6 +60,11 @@ set(HEADERS
     src/DockWindow.h
     src/DockController.h
     src/DockTip.h
+    src/sni/SniTypes.h
+    src/sni/SniItem.h
+    src/sni/SniWatcher.h
+    src/sni/SniIconButton.h
+    src/sni/SniTrayWidget.h
 )
 
 add_executable(wl-dock ${SOURCES} ${HEADERS} ${GEN_HEADER})
@@ -64,6 +73,7 @@ target_link_libraries(wl-dock PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    Qt6::DBus
     LayerShellQt::Interface
     PkgConfig::WAYLAND
 )

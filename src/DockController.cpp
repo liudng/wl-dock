@@ -3,6 +3,7 @@
 #include "DockWindow.h"
 #include "ForeignToplevelManager.h"
 #include "DesktopIconResolver.h"
+#include "sni/SniWatcher.h"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -31,6 +32,14 @@ bool DockController::init()
         return false;
     }
 
+    // 初始化 SNI watcher（系统托盘 host）
+    m_sni = new SniWatcher(this);
+    if (!m_sni->registerHost()) {
+        qCWarning(logCtrl) << "failed to register SNI watcher"
+                           << "(another tray host may be running)";
+        // 不 return：toplevel 管理不受影响，tray 区空白而已
+    }
+
     for (QScreen *s : QGuiApplication::screens())
         addScreen(s);
 
@@ -53,7 +62,7 @@ void DockController::addScreen(QScreen *screen)
         return;
     }
 
-    auto w = new DockWindow(m_manager, m_resolver, screen);
+    auto w = new DockWindow(m_manager, m_resolver, m_sni, screen);
     // 在 show() 之前强制创建 native window，以便正确设置 screen
     w->winId();
     if (QWindow *win = w->windowHandle()) {

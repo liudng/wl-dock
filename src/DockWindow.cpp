@@ -4,6 +4,9 @@
 #include "ClockWidget.h"
 #include "ForeignToplevelManager.h"
 #include "DesktopIconResolver.h"
+#include "sni/SniWatcher.h"
+#include "sni/SniItem.h"
+#include "sni/SniTrayWidget.h"
 
 #include <LayerShellQt/Window>
 
@@ -29,10 +32,11 @@ static constexpr int HIDDEN_H = 1;         // 隐藏时高度（1px，仍可接�
 static constexpr int HIDE_DELAY_MS = 50;   // 鼠标离开后延迟隐藏的时间
 
 DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *resolver,
-                       QScreen *targetScreen, QWidget *parent)
+                       SniWatcher *sni, QScreen *targetScreen, QWidget *parent)
     : QWidget(parent)
     , m_manager(manager)
     , m_resolver(resolver)
+    , m_sni(sni)
     , m_targetScreen(targetScreen)
 {
     setAttribute(Qt::WA_TranslucentBackground);
@@ -52,6 +56,9 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
 
     m_taskManager = new TaskManager(m_resolver, this);
     layout->addWidget(m_taskManager);
+
+    m_tray = new SniTrayWidget(m_sni, this);
+    layout->addWidget(m_tray);
 
     m_clock = new ClockWidget(this);
     m_clock->setFixedWidth(90);
@@ -75,6 +82,17 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
         setHidden(true);
     });
 
+    // SNI 托盘图标信号连接（与 toplevel 同层模式）
+    if (m_sni) {
+        connect(m_sni, &SniWatcher::itemAdded,
+                m_tray, &SniTrayWidget::onItemAdded);
+        connect(m_sni, &SniWatcher::itemRemoved,
+                m_tray, &SniTrayWidget::onItemRemoved);
+        connect(m_sni, &SniWatcher::itemChanged,
+                m_tray, &SniTrayWidget::onItemChanged);
+        connect(m_tray, &SniTrayWidget::sizeChanged, this, [this] { update(); });
+    }
+
     m_hideTimer = new QTimer(this);
     m_hideTimer->setSingleShot(true);
     m_hideTimer->setInterval(HIDE_DELAY_MS);
@@ -85,6 +103,16 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
                        << (m_targetScreen ? m_targetScreen->name() : QStringLiteral("(null)"));
     for (quint32 id : ids)
         m_taskManager->onToplevelAdded(id, m_manager->toplevelInfo(id));
+
+    // 预填充已有的 SNI 托盘图标
+    if (m_sni) {
+        const QList<QUuid> sniIds = m_sni->itemIds();
+        for (const QUuid &id : sniIds) {
+            const auto *item = m_sni->items().value(id);
+            if (item)
+                m_tray->onItemAdded(id, item->snapshot());
+        }
+    }
 }
 
 DockWindow::~DockWindow() = default;
@@ -161,7 +189,8 @@ void DockWindow::paintEvent(QPaintEvent *e)
         return; // 隐藏状态不绘制，1px 透明
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    QRect content = m_taskManager->geometry().united(m_clock->geometry())
+    QRect content = m_taskManager->geometry().united(m_tray->geometry())
+                        .united(m_clock->geometry())
                         .adjusted(-6, -2, 6, 2);
     QPainterPath path;
     path.addRoundedRect(content, 8, 8);

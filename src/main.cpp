@@ -5,10 +5,12 @@
 
 #include "DockController.h"
 #include "ForeignToplevelManager.h" // for qRegisterMetaType<ToplevelInfo>
+#include "sni/SniTypes.h"             // for qRegisterMetaType<TrayItemInfo>
 
 int main(int argc, char *argv[])
 {
     qRegisterMetaType<ToplevelInfo>("ToplevelInfo");
+    qRegisterMetaType<TrayItemInfo>("TrayItemInfo");
 
     // 必须在 QApplication（及 Wayland plugin）创建之前设置，
     // 否则 Qt Wayland plugin 会用默认 xdg-shell，layer-shell 无法生效
