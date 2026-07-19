@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(wl-dock LANGUAGES C CXX)
+project(wl-dock VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,6 +69,7 @@ set(HEADERS
 
 add_executable(wl-dock ${SOURCES} ${HEADERS} ${GEN_HEADER})
 target_include_directories(wl-dock PRIVATE ${GEN_DIR} src)
+target_compile_definitions(wl-dock PRIVATE WL_DOCK_VERSION="${PROJECT_VERSION}")
 target_link_libraries(wl-dock PRIVATE
     Qt6::Core
     Qt6::Gui
