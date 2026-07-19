@@ -20,7 +20,7 @@
 Q_LOGGING_CATEGORY(logDock, "dock.window", QtWarningMsg)
 
 static constexpr int DOCK_H = 64;          // Dock 可见条高度
-static constexpr int TIP_RESERVE = 20;     // 上方为 tooltip 预留的透明区域高度
+static constexpr int TIP_RESERVE = 40;     // 上方为 tooltip 预留的透明区域高度
                                             // （子 QWidget 无法绘制到自身矩形之外，
                                             //   故 dock widget 顶部预留空间容纳 tooltip，
                                             //   高度仅够容纳一行 tooltip + 间隙）
