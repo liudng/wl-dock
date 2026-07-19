@@ -75,6 +75,7 @@ void TaskButton::enterEvent(QEnterEvent *e)
     Q_UNUSED(e);
     m_hover = true;
     update();
+    // 立即显示 tooltip（复用 DockTip：layer-shell 下 QToolTip 的 popup 无法定位）
     ensureTip()->showTip(this, toolTip());
 }
 
@@ -90,16 +91,14 @@ void TaskButton::leaveEvent(QEvent *e)
 void TaskButton::hideEvent(QHideEvent *e)
 {
     QPushButton::hideEvent(e);
-    // dock 自动隐藏时按钮被隐藏，确保 tooltip 跟着消失
     if (m_tip)
         m_tip->hideTip();
 }
 
 DockTip *TaskButton::ensureTip()
 {
-    // tip 作为 dock（共同祖先窗口）的子控件，而不是按钮的子控件，
-    // 否则它会受按钮局部坐标变换影响，且无法越过按钮边界绘制。
     if (!m_tip) {
+        // 父对象设为 dock window，使 tooltip 能绘制到 dock 顶部 TIP_RESERVE 区域
         QWidget *root = window();
         m_tip = new DockTip(root);
     }

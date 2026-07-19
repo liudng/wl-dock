@@ -83,12 +83,14 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
     });
 
     // SNI 托盘图标信号连接（与 toplevel 同层模式）
+    // 通过 ui() 拿到独立信号对象，避开 SniWatcher 上的 DBus adaptor relay
     if (m_sni) {
-        connect(m_sni, &SniWatcher::itemAdded,
+        SniWatcherSignals *ui = m_sni->ui();
+        connect(ui, &SniWatcherSignals::itemAdded,
                 m_tray, &SniTrayWidget::onItemAdded);
-        connect(m_sni, &SniWatcher::itemRemoved,
+        connect(ui, &SniWatcherSignals::itemRemoved,
                 m_tray, &SniTrayWidget::onItemRemoved);
-        connect(m_sni, &SniWatcher::itemChanged,
+        connect(ui, &SniWatcherSignals::itemChanged,
                 m_tray, &SniTrayWidget::onItemChanged);
         connect(m_tray, &SniTrayWidget::sizeChanged, this, [this] { update(); });
     }

@@ -11,6 +11,7 @@ static constexpr auto IFACE_WATCHER = "org.kde.StatusNotifierWatcher";
 
 SniWatcher::SniWatcher(QObject *parent)
     : QObject(parent)
+    , m_ui(new SniWatcherSignals(this))
 {
 }
 
@@ -36,9 +37,14 @@ bool SniWatcher::registerHost()
         return false;
     }
 
+    // 只导出 Q_SCRIPTABLE 标注的 slot/signal：
+    //   - RegisterStatusNotifierItem（方法）
+    //   - StatusNotifierItemRegistered / Unregistered（协议信号）
+    // 内部 UI 信号 itemAdded/itemRemoved/itemChanged 含 QUuid/TrayItemInfo，
+    // 未在 QtDBus 注册且不该外露，不能跟着 ExportAllSignals 一起出去。
     if (!bus.registerObject(PATH_WATCHER, IFACE_WATCHER, this,
-                             QDBusConnection::ExportAllSlots |
-                             QDBusConnection::ExportAllSignals |
+                             QDBusConnection::ExportScriptableSlots |
+                             QDBusConnection::ExportScriptableSignals |
                              QDBusConnection::ExportAllProperties)) {
         qCWarning(logSni) << "Failed to register watcher object:" << bus.lastError().message();
         bus.unregisterService(BUS_WATCHER);
@@ -97,7 +103,7 @@ void SniWatcher::RegisterStatusNotifierItem(const QString &service)
         return;
     }
 
-    emit itemAdded(id, item->snapshot());
+    emit m_ui->itemAdded(id, item->snapshot());
     emit StatusNotifierItemRegistered(service);
 }
 
@@ -106,7 +112,7 @@ void SniWatcher::onItemChanged(SniItem *self)
     // 找到 id
     for (auto it = m_items.constBegin(); it != m_items.constEnd(); ++it) {
         if (it.value() == self) {
-            emit itemChanged(it.key(), self->snapshot());
+            emit m_ui->itemChanged(it.key(), self->snapshot());
             return;
         }
     }
@@ -120,7 +126,7 @@ void SniWatcher::onItemGone(SniItem *self)
             const QString svc = self->service() + self->path();
             m_items.erase(it);
             delete self;
-            emit itemRemoved(id);
+            emit m_ui->itemRemoved(id);
             emit StatusNotifierItemUnregistered(svc);
             return;
         }
