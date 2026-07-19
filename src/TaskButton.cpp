@@ -1,7 +1,9 @@
 #include "TaskButton.h"
+#include "DockTip.h"
 
 #include <QPainter>
 #include <QEnterEvent>
+#include <QHideEvent>
 
 TaskButton::TaskButton(QWidget *parent)
     : QPushButton(parent)
@@ -73,6 +75,7 @@ void TaskButton::enterEvent(QEnterEvent *e)
     Q_UNUSED(e);
     m_hover = true;
     update();
+    ensureTip()->showTip(this, toolTip());
 }
 
 void TaskButton::leaveEvent(QEvent *e)
@@ -80,4 +83,25 @@ void TaskButton::leaveEvent(QEvent *e)
     Q_UNUSED(e);
     m_hover = false;
     update();
+    if (m_tip)
+        m_tip->hideTip();
+}
+
+void TaskButton::hideEvent(QHideEvent *e)
+{
+    QPushButton::hideEvent(e);
+    // dock 自动隐藏时按钮被隐藏，确保 tooltip 跟着消失
+    if (m_tip)
+        m_tip->hideTip();
+}
+
+DockTip *TaskButton::ensureTip()
+{
+    // tip 作为 dock（共同祖先窗口）的子控件，而不是按钮的子控件，
+    // 否则它会受按钮局部坐标变换影响，且无法越过按钮边界绘制。
+    if (!m_tip) {
+        QWidget *root = window();
+        m_tip = new DockTip(root);
+    }
+    return m_tip;
 }

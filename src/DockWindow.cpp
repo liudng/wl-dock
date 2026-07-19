@@ -19,7 +19,12 @@
 
 Q_LOGGING_CATEGORY(logDock, "dock.window", QtWarningMsg)
 
-static constexpr int DOCK_H = 64;          // Dock 完整高度
+static constexpr int DOCK_H = 64;          // Dock 可见条高度
+static constexpr int TIP_RESERVE = 20;     // 上方为 tooltip 预留的透明区域高度
+                                            // （子 QWidget 无法绘制到自身矩形之外，
+                                            //   故 dock widget 顶部预留空间容纳 tooltip，
+                                            //   高度仅够容纳一行 tooltip + 间隙）
+static constexpr int FULL_H = DOCK_H + TIP_RESERVE; // Dock widget 实际高度
 static constexpr int HIDDEN_H = 1;         // 隐藏时高度（1px，仍可接收鼠标事件）
 static constexpr int HIDE_DELAY_MS = 50;   // 鼠标离开后延迟隐藏的时间
 
@@ -39,7 +44,8 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
         setScreen(m_targetScreen);
 
     auto *layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0, 6, 0, 6);
+    // 顶部留 TIP_RESERVE 容纳 tooltip，可见条贴底；上下各 6px 内边距
+    layout->setContentsMargins(0, TIP_RESERVE + 6, 0, 6);
     layout->setSpacing(0);
 
     layout->addStretch();
@@ -117,10 +123,10 @@ void DockWindow::setHidden(bool hidden)
 {
     if (m_hidden == hidden) return;
     m_hidden = hidden;
-    setFixedHeight(hidden ? HIDDEN_H : DOCK_H);
+    setFixedHeight(hidden ? HIDDEN_H : FULL_H);
     update();
     qCWarning(logDock) << "setHidden(" << hidden << ") height ->"
-                       << (hidden ? HIDDEN_H : DOCK_H);
+                       << (hidden ? HIDDEN_H : FULL_H);
 }
 
 void DockWindow::enterEvent(QEnterEvent *e)

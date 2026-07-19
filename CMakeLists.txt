@@ -43,6 +43,7 @@ set(SOURCES
     src/ClockWidget.cpp
     src/DockWindow.cpp
     src/DockController.cpp
+    src/DockTip.cpp
     ${GEN_SOURCE}
 )
 
@@ -54,6 +55,7 @@ set(HEADERS
     src/ClockWidget.h
     src/DockWindow.h
     src/DockController.h
+    src/DockTip.h
 )
 
 add_executable(wl-dock ${SOURCES} ${HEADERS} ${GEN_HEADER})
