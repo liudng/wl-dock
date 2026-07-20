@@ -42,22 +42,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          # 缓存目录挂载到容器的 /root/.ccache（Dockerfile 中 CCACHE_DIR）
+          path: /tmp/ccache
+          # 按 os+arch 隔离缓存，再以 commit sha 创建新条目；
+          # restore-keys 命中同 os+arch 最近一次的缓存作为兜底
+          key: ccache-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ matrix.arch }}-
+
       - name: Build in container
         run: |
           set -euo pipefail
           build_dir=build-${{ matrix.os }}-${{ matrix.arch }}
           # docker pull 会根据 runner 架构自动拉取对应镜像（多架构镜像已由 build-image.yml 构建推送）
           docker pull "${{ matrix.builder }}"
-          docker run --rm -e BUILD_DIR="$build_dir" -v "$PWD:/workspace" -w /workspace "${{ matrix.builder }}" bash -lc '
-            set -euo pipefail
-            mkdir -p "$BUILD_DIR"
-            cd "$BUILD_DIR"
-            cmake -DCMAKE_BUILD_TYPE=Release ..
-            cmake --build . -- -j$(nproc)
-          '
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wl-dock-${{ matrix.os }}-${{ matrix.arch }}
-          path: build-${{ matrix.os }}-${{ matrix.arch }}/wl-dock
+          mkdir -p /tmp/ccache
+          docker run --rm \
+            -e BUILD_DIR="$build_dir" \
+            -v "$PWD:/workspace" \
+            -v "/tmp/ccache:/root/.ccache" \
+            -w /workspace "${{ matrix.builder }}" bash -lc '
+              set -euo pipefail
+              mkdir -p "$BUILD_DIR"
+              cd "$BUILD_DIR"
+              cmake -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                    ..
+              cmake --build . -- -j$(nproc)
+              ccache --show-stats
+            '
