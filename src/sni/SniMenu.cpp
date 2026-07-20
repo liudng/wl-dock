@@ -9,6 +9,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QTimer>
 #include <QFontMetrics>
 #include <QWindow>
 #include <QEvent>
@@ -212,6 +213,17 @@ void SniMenu::hideEvent(QHideEvent *)
         m_loop->quit();
 }
 
+void SniMenu::leaveEvent(QEvent *e)
+{
+    QWidget::leaveEvent(e);
+    // 鼠标离开菜单区域，延迟关闭（避免边缘误触）。
+    // layer_surface 的 KeyboardInteractivityExclusive 不影响鼠标 leave 事件。
+    QTimer::singleShot(150, this, [this] {
+        if (!underMouse() && isVisible())
+            hide();
+    });
+}
+
 bool SniMenu::eventFilter(QObject *o, QEvent *e)
 {
     // 外部点击 / 按键关闭菜单
@@ -219,6 +231,20 @@ bool SniMenu::eventFilter(QObject *o, QEvent *e)
         if (e->type() == QEvent::MouseButtonPress
             || e->type() == QEvent::Wheel) {
             hide();
+        } else if (e->type() == QEvent::MouseMove) {
+            // 鼠标在菜单外移动（包括从未进入菜单的情况），延迟关闭。
+            // 用定时器避免从托盘图标移动到菜单过程中的误触：
+            // 鼠标进入菜单后 underMouse() 为 true，定时器触发时不关闭。
+            if (!m_outsideTimer) {
+                m_outsideTimer = new QTimer(this);
+                m_outsideTimer->setSingleShot(true);
+                m_outsideTimer->setInterval(300);
+                connect(m_outsideTimer, &QTimer::timeout, this, [this] {
+                    if (isVisible() && !underMouse())
+                        hide();
+                });
+            }
+            m_outsideTimer->start();
         }
     }
     return QWidget::eventFilter(o, e);

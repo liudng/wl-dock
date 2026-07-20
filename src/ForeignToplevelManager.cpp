@@ -246,6 +246,25 @@ void ForeignToplevelManager::handleDone(void *data, zwlr_foreign_toplevel_handle
     Q_UNUSED(handle);
     auto h = static_cast<Handle *>(data);
     auto self = h->manager;
+    // 子窗口 app_id 为空时，依次尝试：
+    // 1. parent 的 app_id（有 transient for 关系的子窗口）
+    // 2. title 作为 app_id（无 parent 的独立子窗口，如微信聊天窗口：
+    //    xprop 无 WM_CLASS 也无 WM_TRANSIENT_FOR，但 _NET_WM_NAME="微信"）
+    // iconForAppId 会用 title 匹配 .desktop 文件的 Name 字段。
+    if (h->info.appId.isEmpty()) {
+        if (h->parentHandle) {
+            auto parentIt = self->m_byWl.constFind(h->parentHandle);
+            if (parentIt != self->m_byWl.cend() && !parentIt.value()->info.appId.isEmpty()) {
+                h->info.appId = parentIt.value()->info.appId;
+                qCInfo(logFtm) << "toplevel" << h->id << "inherited appId" << h->info.appId
+                               << "from parent";
+            }
+        }
+        if (h->info.appId.isEmpty() && !h->info.title.isEmpty()) {
+            h->info.appId = h->info.title;
+            qCInfo(logFtm) << "toplevel" << h->id << "using title as appId" << h->info.appId;
+        }
+    }
     if (!h->announced) {
         h->announced = true;
         qCInfo(logFtm) << "toplevel done (first): id=" << h->id
@@ -274,6 +293,7 @@ void ForeignToplevelManager::handleClosed(void *data, zwlr_foreign_toplevel_hand
 void ForeignToplevelManager::handleParent(void *data, zwlr_foreign_toplevel_handle_v1 *handle,
                                           zwlr_foreign_toplevel_handle_v1 *parent)
 {
-    Q_UNUSED(data); Q_UNUSED(handle); Q_UNUSED(parent)
-    // parent 事件暂不处理
+    Q_UNUSED(handle);
+    auto h = static_cast<Handle *>(data);
+    h->parentHandle = parent;
 }

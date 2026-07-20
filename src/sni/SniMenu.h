@@ -7,6 +7,7 @@
 
 class QEventLoop;
 class QWindow;
+class QTimer;
 
 /**
  * 自绘 SNI 托盘右键菜单。
@@ -48,6 +49,7 @@ protected:
     void mousePressEvent(QMouseEvent *e) override;
     void keyPressEvent(QKeyEvent *e) override;
     void hideEvent(QHideEvent *e) override;
+    void leaveEvent(QEvent *e) override;
     bool eventFilter(QObject *o, QEvent *e) override;
     QSize sizeHint() const override;
 
@@ -62,4 +64,5 @@ private:
     int m_hovered = -1;
     int m_result = -1;
     QEventLoop *m_loop = nullptr;
+    QTimer *m_outsideTimer = nullptr; // 鼠标移出菜单区域延迟关闭
 };

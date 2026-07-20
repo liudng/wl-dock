@@ -55,6 +55,10 @@ private:
         ForeignToplevelManager *manager = nullptr;
         ToplevelInfo info;
         bool announced = false;
+        // wlr-foreign-toplevel-management 的 parent 事件记录的父 toplevel。
+        // 子窗口（如微信聊天窗口）app_id 可能为空，此时用 parent 的 app_id
+        // 作为图标识别的 fallback。
+        zwlr_foreign_toplevel_handle_v1 *parentHandle = nullptr;
     };
 
     // registry
