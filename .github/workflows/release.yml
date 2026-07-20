@@ -72,35 +72,208 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 需要完整历史以查找上一个版本 tag 并生成 changelog
+          fetch-depth: 0
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
-          body: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          current_tag="${GITHUB_REF#refs/tags/}"
+
+          # 解析语义化版本号 major.minor.patch
+          IFS='.' read -r major minor patch <<< "$current_tag"
+          major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
+
+          # 按版本类型确定上一个版本：
+          #   patch>0                   → 同 major.minor 系列中小于当前版本的最大 tag
+          #   patch=0, minor>0          → 同 major 的上一个 minor 系列最新 patch
+          #   patch=0, minor=0, major>0 → 上一个 major 系列最新版本
+          # git tag --sort=v:refname 为版本号升序，awk 取当前 tag 之前一个
+          prev_tag=""
+          if [ "$patch" -gt 0 ]; then
+            prev_tag=$(git tag --list --sort=v:refname \
+                       | awk -v cur="$current_tag" -v re="^${major}\\.${minor}\\." '
+                           $0 ~ re && $0 != cur { prev = $0 }
+                           $0 == cur { print prev; exit }
+                         ' || true)
+          elif [ "$minor" -gt 0 ]; then
+            prev_minor=$((minor - 1))
+            prev_tag=$(git tag --list --sort=v:refname \
+                       | grep -E "^${major}\.${prev_minor}\." \
+                       | tail -n 1 || true)
+          elif [ "$major" -gt 0 ]; then
+            prev_major=$((major - 1))
+            prev_tag=$(git tag --list --sort=v:refname \
+                       | grep -E "^${prev_major}\." \
+                       | tail -n 1 || true)
+          fi
+
+          # 兜底：未按规则匹配到，使用小于当前版本的最大 tag
+          if [ -z "$prev_tag" ]; then
+            prev_tag=$(git tag --list --sort=v:refname \
+                       | awk -v cur="$current_tag" '
+                           $0 != cur { prev = $0 }
+                           $0 == cur { print prev; exit }
+                         ' || true)
+          fi
+
+          echo "Current tag: $current_tag"
+          echo "Previous tag: ${prev_tag:-<none>}"
+          echo "previous_tag=$prev_tag" >> "$GITHUB_OUTPUT"
+
+          # 提交范围：prev_tag 之后到 HEAD
+          if [ -n "$prev_tag" ]; then
+            range="${prev_tag}..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          # 按 conventional-commits 类型分组
+          tmpdir=$(mktemp -d)
+          : > "$tmpdir/feat"
+          : > "$tmpdir/fix"
+          : > "$tmpdir/perf"
+          : > "$tmpdir/refactor"
+          : > "$tmpdir/docs"
+          : > "$tmpdir/build"
+          : > "$tmpdir/chore"
+          : > "$tmpdir/ci"
+          : > "$tmpdir/style"
+          : > "$tmpdir/test"
+          : > "$tmpdir/other"
+
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -z "$line" ] && continue
+            if   [[ "$line" =~ ^feat(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/feat"
+            elif [[ "$line" =~ ^fix(\(.+\))?:\ * ]];  then echo "$line" >> "$tmpdir/fix"
+            elif [[ "$line" =~ ^perf(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/perf"
+            elif [[ "$line" =~ ^refactor(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/refactor"
+            elif [[ "$line" =~ ^docs(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/docs"
+            elif [[ "$line" =~ ^build(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/build"
+            elif [[ "$line" =~ ^chore(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/chore"
+            elif [[ "$line" =~ ^ci(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/ci"
+            elif [[ "$line" =~ ^style(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/style"
+            elif [[ "$line" =~ ^test(\(.+\))?:\ * ]]; then echo "$line" >> "$tmpdir/test"
+            else echo "$line" >> "$tmpdir/other"
+            fi
+          done < <(git log "$range" --pretty=format:'%s')
+
+          count() { local f=$1; [ -s "$f" ] && wc -l < "$f" | tr -d ' ' || echo 0; }
+          feat_n=$(count "$tmpdir/feat")
+          fix_n=$(count "$tmpdir/fix")
+          perf_n=$(count "$tmpdir/perf")
+          refactor_n=$(count "$tmpdir/refactor")
+          docs_n=$(count "$tmpdir/docs")
+          build_n=$(count "$tmpdir/build")
+          chore_n=$(count "$tmpdir/chore")
+          ci_n=$(count "$tmpdir/ci")
+          style_n=$(count "$tmpdir/style")
+          test_n=$(count "$tmpdir/test")
+          other_n=$(count "$tmpdir/other")
+
+          notes_file="$tmpdir/notes.md"
+          {
+            echo "## 版本总结"
+            echo ""
+            summary=()
+            [ "$feat_n" -gt 0 ]     && summary+=("新增 ${feat_n} 项功能")
+            [ "$fix_n" -gt 0 ]      && summary+=("修复 ${fix_n} 个问题")
+            [ "$perf_n" -gt 0 ]     && summary+=("提升 ${perf_n} 处性能")
+            [ "$refactor_n" -gt 0 ] && summary+=("重构 ${refactor_n} 处代码")
+            [ "$docs_n" -gt 0 ]     && summary+=("更新 ${docs_n} 篇文档")
+            [ "$build_n" -gt 0 ]    && summary+=("改进 ${build_n} 项构建/打包")
+            [ "$ci_n" -gt 0 ]       && summary+=("调整 ${ci_n} 项 CI 配置")
+            [ "$style_n" -gt 0 ]    && summary+=("调整 ${style_n} 处代码风格")
+            [ "$test_n" -gt 0 ]     && summary+=("补充 ${test_n} 项测试")
+            [ "$chore_n" -gt 0 ]    && summary+=("整理 ${chore_n} 项杂务")
+            [ "$other_n" -gt 0 ]    && summary+=("其他 ${other_n} 项变更")
+
+            if [ ${#summary[@]} -gt 0 ]; then
+              printf '本版本相对 %s，%s。\n' "${prev_tag:-初始版本}" "$(IFS=，; echo "${summary[*]}")"
+            else
+              printf '本版本相对 %s 无显著变更。\n' "${prev_tag:-初始版本}"
+            fi
+            echo ""
+            echo "## 变更统计"
+            echo ""
+            echo "| 类型 | 数量 |"
+            echo "| --- | --- |"
+            [ "$feat_n" -gt 0 ]     && echo "| ✨ 新功能 | ${feat_n} |"
+            [ "$fix_n" -gt 0 ]      && echo "| 🐛 修复 | ${fix_n} |"
+            [ "$perf_n" -gt 0 ]     && echo "| ⚡ 性能 | ${perf_n} |"
+            [ "$refactor_n" -gt 0 ] && echo "| ♻️ 重构 | ${refactor_n} |"
+            [ "$docs_n" -gt 0 ]     && echo "| 📝 文档 | ${docs_n} |"
+            [ "$build_n" -gt 0 ]    && echo "| 📦 构建 | ${build_n} |"
+            [ "$ci_n" -gt 0 ]       && echo "| 👷 CI | ${ci_n} |"
+            [ "$style_n" -gt 0 ]    && echo "| 🎨 风格 | ${style_n} |"
+            [ "$test_n" -gt 0 ]     && echo "| 🧪 测试 | ${test_n} |"
+            [ "$chore_n" -gt 0 ]    && echo "| 🔧 杂务 | ${chore_n} |"
+            [ "$other_n" -gt 0 ]    && echo "| 📌 其他 | ${other_n} |"
+            echo ""
+            echo "## 详细变化"
+            echo ""
+
+            section() {
+              local title=$1
+              local file=$2
+              if [ -s "$file" ]; then
+                echo "### ${title}"
+                echo ""
+                while IFS= read -r l; do
+                  echo "- ${l}"
+                done < "$file"
+                echo ""
+              fi
+            }
+
+            section "✨ 新功能" "$tmpdir/feat"
+            section "🐛 修复"   "$tmpdir/fix"
+            section "⚡ 性能"   "$tmpdir/perf"
+            section "♻️ 重构"  "$tmpdir/refactor"
+            section "📝 文档"   "$tmpdir/docs"
+            section "📦 构建"   "$tmpdir/build"
+            section "👷 CI"     "$tmpdir/ci"
+            section "🎨 风格"   "$tmpdir/style"
+            section "🧪 测试"   "$tmpdir/test"
+            section "🔧 杂务"   "$tmpdir/chore"
+            section "📌 其他"   "$tmpdir/other"
+
+            echo "---"
+            echo ""
+            echo "**提交范围：** \`${range}\`"
+          } > "$notes_file"
+
+          echo "----- Generated release notes -----"
+          cat "$notes_file"
+          echo "-----------------------------------"
+
+          echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
 
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
 
-      - name: Upload release assets
+      - name: Create GitHub Release and upload assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          tag_name="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag_name" \
+            --title "$tag_name" \
+            --notes-file "${{ steps.notes.outputs.notes_file }}" \
+            --draft=false \
+            --prerelease=false
+
           find artifacts -name '*.tar.gz' -print0 | while IFS= read -r -d '' file; do
             echo "Uploading $file"
-            gh release upload "${GITHUB_REF#refs/tags/}" "$file" --clobber
+            gh release upload "$tag_name" "$file" --clobber
           done
