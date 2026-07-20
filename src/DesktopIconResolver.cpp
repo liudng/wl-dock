@@ -272,7 +272,7 @@ QIcon DesktopIconResolver::loadFromIconNameOrPath(const QString &nameOrPath) con
 
 QIcon DesktopIconResolver::defaultIcon()
 {
-    QIcon themed = QIcon::fromTheme("application-x-executable");
+    QIcon themed = QIcon::fromTheme(m_defaultIconName);
     if (!themed.isNull())
         return themed;
     themed = QIcon::fromTheme("applications-other");

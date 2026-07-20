@@ -22,9 +22,11 @@ DockController::~DockController()
     delete m_resolver; // 非 QObject，需手动释放
 }
 
-bool DockController::init()
+bool DockController::init(const QString &defaultIconName)
 {
     m_resolver = new DesktopIconResolver();
+    if (!defaultIconName.isEmpty())
+        m_resolver->setDefaultIconName(defaultIconName);
     m_manager = new ForeignToplevelManager(this);
 
     if (!m_manager->connectToDisplay()) {

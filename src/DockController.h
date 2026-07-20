@@ -18,7 +18,9 @@ public:
     explicit DockController(QObject *parent = nullptr);
     ~DockController() override;
 
-    bool init();
+    // defaultIconName: 查不到 .desktop 时的兜底图标名称（对应 QIcon::fromTheme 名），
+    // 空则用 DesktopIconResolver 内部默认值 "application-x-executable"。
+    bool init(const QString &defaultIconName = QString());
 
     SniWatcher *sniWatcher() const { return m_sni; }
 

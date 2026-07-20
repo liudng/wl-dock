@@ -12,13 +12,18 @@ class DesktopIconResolver
 public:
     QIcon iconForAppId(const QString &appId);
 
+    // 设置默认应用图标名称（查不到 .desktop 时的兜底图标），
+    // 默认 "application-x-executable"。可通过命令行 --default-icon 指定。
+    void setDefaultIconName(const QString &name) { m_defaultIconName = name; }
+
 private:
     QStringList searchDirs() const;
     QString findDesktopFile(const QString &appId) const;
     static QString readDesktopEntryValue(const QString &path, const QString &key);
     static QString readIconValue(const QString &path);
     QIcon loadFromIconNameOrPath(const QString &nameOrPath) const;
-    static QIcon defaultIcon();
+    QIcon defaultIcon();
 
     QHash<QString, QIcon> m_cache;
+    QString m_defaultIconName = QStringLiteral("application-x-executable");
 };
