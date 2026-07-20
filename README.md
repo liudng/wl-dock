@@ -6,7 +6,7 @@ A lightweight Qt panel/taskbar designed specifically for wlroots-based Wayland c
 
 ## Project Overview
 
-`wl-dock` is a Wayland desktop taskbar and panel application. It obtains the current window list through the `wlr-foreign-toplevel-management-v1` protocol and displays task buttons and a clock as an overlay at the bottom of each connected display. It also acts as a StatusNotifierItem (SNI) host, showing system tray icons from applications such as Fcitx5, NetworkManager, and Telegram.
+`wl-dock` is a Wayland desktop taskbar and panel application. It obtains the current window list through the `wlr-foreign-toplevel-management-v1` protocol and displays task buttons and a clock as an overlay at the bottom of each connected display. It also acts as a StatusNotifierItem (SNI) host, showing system tray icons from applications such as Fcitx5, NetworkManager, and Blueman.
 
 ## Key Features
 
