@@ -25,6 +25,9 @@ public:
 signals:
     void activateRequested(SniItem *item);
     void secondaryActivateRequested(SniItem *item);
+    // 右键请求，或 ItemIsMenu=true 的左键请求：走 SNI ContextMenu
+    // globalPos 是鼠标的全局位置，host 弹 QMenu 用
+    void contextMenuRequested(SniItem *item, const QPoint &globalPos);
 
 protected:
     void paintEvent(QPaintEvent *e) override;

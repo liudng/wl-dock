@@ -48,6 +48,8 @@ set(SOURCES
     src/sni/SniWatcher.cpp
     src/sni/SniIconButton.cpp
     src/sni/SniTrayWidget.cpp
+    src/sni/SniDbusMenu.cpp
+    src/sni/SniMenu.cpp
     ${GEN_SOURCE}
 )
 
@@ -65,6 +67,8 @@ set(HEADERS
     src/sni/SniWatcher.h
     src/sni/SniIconButton.h
     src/sni/SniTrayWidget.h
+    src/sni/SniDbusMenu.h
+    src/sni/SniMenu.h
 )
 
 add_executable(wl-dock ${SOURCES} ${HEADERS} ${GEN_HEADER})

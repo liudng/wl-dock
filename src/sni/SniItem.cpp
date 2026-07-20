@@ -1,13 +1,18 @@
 #include "SniItem.h"
+#include "SniDbusMenu.h"
 
 #include <QDBusInterface>
 #include <QDBusArgument>
+#include <QDBusObjectPath>
 #include <QDBusPendingReply>
 #include <QDBusConnection>
 #include <QDBusServiceWatcher>
 #include <QImage>
 #include <QBuffer>
 #include <QPixmap>
+#include <QPoint>
+#include <QWidget>
+#include <QWindow>
 #include <QRegularExpression>
 #include <QLoggingCategory>
 
@@ -88,6 +93,22 @@ void SniItem::refreshAll()
     m_attentionIconPixmap = decodePixmapArray(props.value(QStringLiteral("AttentionIconPixmap")));
     m_tooltipText = toolTipToString(props.value(QStringLiteral("ToolTip")));
     m_itemIsMenu = props.value(QStringLiteral("ItemIsMenu")).toBool();
+
+    // Menu 属性：QDBusObjectPath，指向 com.canonical.dbusmenu 对象。
+    // 非空时 host 主动渲染菜单（覆盖大多数现代 SNI 应用，包括 fcitx5）。
+    const QVariant menuVar = props.value(QStringLiteral("Menu"));
+    if (menuVar.isValid()) {
+        QString menuPath;
+        if (menuVar.userType() == qMetaTypeId<QDBusObjectPath>())
+            menuPath = menuVar.value<QDBusObjectPath>().path();
+        else
+            menuPath = menuVar.toString();
+        if (!menuPath.isEmpty() && menuPath != QLatin1String("/")) {
+            m_menuPath = menuPath;
+            if (!m_menu)
+                m_menu = new SniDbusMenu(m_service, m_menuPath, this);
+        }
+    }
 }
 
 TrayItemInfo SniItem::snapshot() const
@@ -110,6 +131,22 @@ void SniItem::activate(int x, int y)
 void SniItem::secondaryActivate(int x, int y)
 {
     m_iface->asyncCall(QStringLiteral("SecondaryActivate"), x, y);
+}
+
+void SniItem::contextMenu(QWidget *parentWidget, const QPoint &globalPos)
+{
+    // 优先路径 B：host 主动渲染 DBusMenu（fcitx5 / KDE / Telegram 等都走这条）
+    if (m_menu) {
+        // parentWidget 是 SniTrayWidget 等子 widget，windowHandle() 为 nullptr。
+        // 用 window()->windowHandle() 取顶层 DockWindow 的 QWindow，
+        // SniMenu 需要它来获知 dock 所在屏幕（多屏定位）。
+        QWindow *dockWindow = parentWidget ? parentWidget->window()->windowHandle() : nullptr;
+        m_menu->popup(dockWindow, globalPos);
+        return;
+    }
+    // 回退路径 A：让远端自己弹菜单。Wayland 下传 (0,0)，
+    // 远端用 QCursor::pos() / gdk_device_get_position 自取鼠标位置。
+    m_iface->asyncCall(QStringLiteral("ContextMenu"), 0, 0);
 }
 
 void SniItem::onNewIcon()

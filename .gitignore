@@ -1,3 +1,8 @@
 /build
 CMakeLists.txt.user
 /.zcode
+/.vscode
+/qt6-base*
+/layer-shell*
+/qt6-wayland*
+/qtbase-opensource*

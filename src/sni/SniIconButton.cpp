@@ -96,10 +96,18 @@ void SniIconButton::hideEvent(QHideEvent *e)
 void SniIconButton::mousePressEvent(QMouseEvent *e)
 {
     QPushButton::mousePressEvent(e);
-    if (e->button() == Qt::LeftButton)
-        emit activateRequested(m_item);
-    else if (e->button() == Qt::MiddleButton)
+    // ItemIsMenu=true 的 item 只支持菜单：左键也走 ContextMenu，不调 Activate。
+    // SNI 规范明确要求 host 在这种情况下把 Activate 当作 ContextMenu 处理。
+    if (e->button() == Qt::LeftButton) {
+        if (m_item && m_item->isItemMenu())
+            emit contextMenuRequested(m_item, e->globalPosition().toPoint());
+        else
+            emit activateRequested(m_item);
+    } else if (e->button() == Qt::MiddleButton) {
         emit secondaryActivateRequested(m_item);
+    } else if (e->button() == Qt::RightButton) {
+        emit contextMenuRequested(m_item, e->globalPosition().toPoint());
+    }
 }
 
 DockTip *SniIconButton::ensureTip()

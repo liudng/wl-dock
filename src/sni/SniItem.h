@@ -5,10 +5,13 @@
 #include <QIcon>
 #include <QList>
 #include <QByteArray>
+#include <QPoint>
 
 #include "SniTypes.h"
 
 class QDBusInterface;
+class QWidget;
+class SniDbusMenu;
 
 // 单个 StatusNotifierItem（系统托盘应用）的 D-Bus 代理。
 // 一个 SniItem 对应一个托盘应用。它：
@@ -38,6 +41,19 @@ public:
     // 触发远端动作。Wayland 下全局坐标不可知，按惯例传 (0,0)。
     void activate(int x = 0, int y = 0);
     void secondaryActivate(int x = 0, int y = 0);
+    // 请求弹出右键菜单。SNI 规范定义了两条路径，本实现按以下优先级处理：
+    //   1) 若 Menu 属性非空（应用暴露了 com.canonical.dbusmenu 接口），
+    //      host 主动用 QMenu 渲染菜单（典型：fcitx5、KDE 系列）
+    //   2) 否则调用远端 ContextMenu(x, y) 方法，让应用自己弹菜单
+    //      （典型：少数老旧 SNI 实现；现代 GTK/Qt 应用通常用方法 1）
+    // globalPos 是 host 弹 QMenu 的目标位置；若走路径 2 该参数忽略，
+    // 远端用 QCursor::pos() / gdk_device_get_position 自取鼠标位置。
+    // parentWidget 用于 QMenu 的 transientParent（让 xdg_popup 相对 dock 定位）。
+    void contextMenu(QWidget *parentWidget, const QPoint &globalPos);
+
+    // ItemIsMenu 属性：true 表示该 item 只支持菜单，不支持 Activate。
+    // 这种情况下左键也应走 contextMenu 而非 activate。
+    bool isItemMenu() const { return m_itemIsMenu; }
 
 signals:
     // 任意属性变化时触发，watcher 转发给 UI 层。
@@ -79,4 +95,6 @@ private:
     QList<PixmapEntry> m_attentionIconPixmap;
     QString m_tooltipText;
     bool m_itemIsMenu = false;
+    QString m_menuPath;          // Menu 属性：com.canonical.dbusmenu 对象路径
+    SniDbusMenu *m_menu = nullptr;
 };

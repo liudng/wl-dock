@@ -37,6 +37,9 @@ void SniTrayWidget::onItemAdded(const QUuid &id, const TrayItemInfo &info)
     connect(btn, &SniIconButton::secondaryActivateRequested, this, [](SniItem *i) {
         i->secondaryActivate(0, 0);
     });
+    connect(btn, &SniIconButton::contextMenuRequested, this, [this](SniItem *i, const QPoint &pos) {
+        i->contextMenu(this, pos);
+    });
 
     m_icons.insert(id, btn);
 
