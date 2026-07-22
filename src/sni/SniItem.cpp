@@ -113,14 +113,14 @@ void SniItem::refreshAll()
 
 TrayItemInfo SniItem::snapshot() const
 {
-    TrayItemInfo info;
-    info.id = m_id.isEmpty() ? m_service : m_id;
-    info.title = m_title;
-    info.status = m_status;
-    info.icon = buildIcon();
-    info.tooltipText = m_tooltipText;
-    info.itemIsMenu = m_itemIsMenu;
-    return info;
+    return TrayItemInfo{
+        .id = m_id.isEmpty() ? m_service : m_id,
+        .title = m_title,
+        .status = m_status,
+        .icon = buildIcon(),
+        .tooltipText = m_tooltipText,
+        .itemIsMenu = m_itemIsMenu,
+    };
 }
 
 void SniItem::activate(int x, int y)
@@ -283,7 +283,7 @@ QList<SniItem::PixmapEntry> SniItem::decodePixmapArray(const QVariant &v)
         QByteArray bytes;
         arg >> w >> h >> bytes;
         arg.endStructure();
-        result.append(PixmapEntry{w, h, bytes});
+        result.append(PixmapEntry{.width = w, .height = h, .bytes = bytes});
     }
     arg.endArray();
     return result;

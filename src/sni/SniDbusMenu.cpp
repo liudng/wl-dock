@@ -127,9 +127,7 @@ void SniDbusMenu::buildItems(const QList<MenuItem> &items, QList<SniMenu::Item> 
             continue;
 
         if (type == QLatin1String("separator")) {
-            SniMenu::Item m;
-            m.separator = true;
-            out.append(m);
+            out.append(SniMenu::Item{.separator = true});
             continue;
         }
 
@@ -143,21 +141,20 @@ void SniDbusMenu::buildItems(const QList<MenuItem> &items, QList<SniMenu::Item> 
         if (!iconName.isEmpty())
             icon = QIcon::fromTheme(iconName);
 
-        SniMenu::Item m;
-        m.label = label;
-        m.icon = icon;
-        m.enabled = enabled;
-        m.id = item.id;
-
         const QString toggleType = item.properties.value(QStringLiteral("toggle-type")).toString();
         const int toggleState = item.properties.value(QStringLiteral("toggle-state"), -1).toInt();
-        if (toggleType == QLatin1String("checkmark") || toggleType == QLatin1String("radio")) {
-            m.checkable = true;
-            m.checked = (toggleState == 1);
-        }
+        const bool isCheckable = (toggleType == QLatin1String("checkmark")
+                                  || toggleType == QLatin1String("radio"));
 
         // 子菜单暂不展开（fcitx5 等主菜单都不用）
-        out.append(m);
+        out.append(SniMenu::Item{
+            .label = label,
+            .icon = icon,
+            .enabled = enabled,
+            .checkable = isCheckable,
+            .checked = (isCheckable && toggleState == 1),
+            .id = item.id,
+        });
     }
 }
 

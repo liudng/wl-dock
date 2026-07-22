@@ -3,6 +3,8 @@
 #include <QSocketNotifier>
 #include <QLoggingCategory>
 
+#include <span>
+
 #include <wayland-client.h>
 #include "wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
@@ -227,11 +229,12 @@ void ForeignToplevelManager::handleState(void *data, zwlr_foreign_toplevel_handl
     h->info.minimized = false;
     h->info.activated = false;
     h->info.fullscreen = false;
-    // 纯 C++ 迭代 state 数组（避免 wl_array_for_each 宏里的 typeof 扩展）
-    const uint32_t *begin = static_cast<const uint32_t *>(state->data);
-    const uint32_t *end = begin + state->size / sizeof(uint32_t);
-    for (const uint32_t *p = begin; p != end; ++p) {
-        switch (*p) {
+    // 用 std::span 安全遍历 wl_array（避免 wl_array_for_each 宏里的 typeof 扩展）
+    const auto states = std::span<const uint32_t>{
+        static_cast<const uint32_t *>(state->data),
+        state->size / sizeof(uint32_t)};
+    for (const uint32_t s : states) {
+        switch (s) {
         case ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED: h->info.maximized = true; break;
         case ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED: h->info.minimized = true; break;
         case ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED: h->info.activated = true; break;

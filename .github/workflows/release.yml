@@ -22,18 +22,22 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:debian-trixie
+            cpack_generators: "TGZ;DEB"
           - os: debian-13
             arch: arm64
             runner: ubuntu-24.04-arm
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:debian-trixie
+            cpack_generators: "TGZ;DEB"
           - os: fedora-42
-            arch: amd64
+            arch: x86_64
             runner: ubuntu-latest
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:fedora-42
+            cpack_generators: "TGZ;RPM"
           - os: fedora-42
-            arch: arm64
+            arch: aarch64
             runner: ubuntu-24.04-arm
             builder: ghcr.io/${{ github.repository_owner }}/wl-dock-builder:fedora-42
+            cpack_generators: "TGZ;RPM"
 
     steps:
       - uses: actions/checkout@v4
@@ -61,12 +65,15 @@ jobs:
           set -euo pipefail
           build_dir=build-${{ matrix.os }}-${{ matrix.arch }}
           tag_name="${GITHUB_REF#refs/tags/}"
+          package_tag="${{ matrix.os }}-${{ matrix.arch }}"
           # docker pull 会根据 runner 架构自动拉取对应镜像（多架构镜像已由 build-image.yml 构建推送）
           docker pull "${{ matrix.builder }}"
           mkdir -p /tmp/ccache
           docker run --rm \
             -e BUILD_DIR="$build_dir" \
             -e TAG_NAME="$tag_name" \
+            -e PACKAGE_TAG="$package_tag" \
+            -e CPACK_GENERATORS="${{ matrix.cpack_generators }}" \
             -v "$PWD:/workspace" \
             -v "/tmp/ccache:/root/.ccache" \
             -w /workspace "${{ matrix.builder }}" bash -lc '
@@ -76,21 +83,32 @@ jobs:
               cmake -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                    -DWL_DOCK_PACKAGE_TAG="$PACKAGE_TAG" \
                     ..
               cmake --build . -- -j$(nproc)
               ccache --show-stats
               # strip 去除符号表与调试信息，减小发布二进制体积
-              echo "Before strip: $(ls -lh wl-dock | awk '{print $5}')"
+              echo "Before strip:"
+              ls -lh wl-dock
               strip --strip-all wl-dock
-              echo "After strip:  $(ls -lh wl-dock | awk '{print $5}')"
-              tar czf "/workspace/wl-dock-${{ matrix.os }}-${{ matrix.arch }}-${TAG_NAME}.tar.gz" wl-dock
+              echo "After strip:"
+              ls -lh wl-dock
+              # 用 CPack 生成发布包（TGZ / DEB / RPM，遵循 Linux FHS 目录结构）
+              cpack -G "$CPACK_GENERATORS" --verbose
+              echo "Generated packages:"
+              ls -lh wl-dock-*.* 2>/dev/null || true
+              # 复制到 workspace 供 artifact 上传
+              cp wl-dock-*.tar.gz wl-dock-*.deb wl-dock-*.rpm /workspace/ 2>/dev/null || true
             '
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wl-dock-${{ matrix.os }}-${{ matrix.arch }}
-          path: wl-dock-${{ matrix.os }}-${{ matrix.arch }}-${{ github.ref_name }}.tar.gz
+          path: |
+            wl-dock-*.tar.gz
+            wl-dock-*.deb
+            wl-dock-*.rpm
 
   publish:
     name: Publish release assets
@@ -300,7 +318,8 @@ jobs:
             --draft=false \
             --prerelease=false
 
-          find artifacts -name '*.tar.gz' -print0 | while IFS= read -r -d '' file; do
-            echo "Uploading $file"
-            gh release upload "$tag_name" "$file" --clobber
-          done
+          find artifacts -type f \( -name '*.tar.gz' -o -name '*.deb' -o -name '*.rpm' \) -print0 \
+            | while IFS= read -r -d '' file; do
+              echo "Uploading $file"
+              gh release upload "$tag_name" "$file" --clobber
+            done

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=wl-dock
+GenericName=Wayland Dock
+Comment=Lightweight dock for wlroots-based compositors (Labwc, sway, Hyprland)
+Comment[zh_CN]=适用于 wlroots 系合成器（Labwc、sway、Hyprland）的轻量 Dock
+Exec=wl-dock
+Icon=wl-dock
+Terminal=false
+Categories=Utility;DesktopUtility;Shell;
+Keywords=dock;taskbar;panel;wayland;wlroots;labwc;
+StartupNotify=false
+NoDisplay=true

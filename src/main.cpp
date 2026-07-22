@@ -1,8 +1,12 @@
 #include <QApplication>
 #include <QIcon>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QLoggingCategory>
+#include <QStandardPaths>
 #include <QTextStream>
 #include <QString>
+#include <QDir>
 
 #include <LayerShellQt/Shell>
 
@@ -63,6 +67,25 @@ int main(int argc, char *argv[])
     // 设置图标主题（影响 QIcon::fromTheme 的查找路径）
     if (!iconTheme.isEmpty())
         QIcon::setThemeName(iconTheme);
+
+    // 单实例检查：通过本地 socket 确保同一会话只有一个 wl-dock 实例运行。
+    // socket 放在 $XDG_RUNTIME_DIR 下（Wayland 会话必然存在），按用户隔离。
+    const QString socketPath =
+        QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation))
+            .filePath(QStringLiteral("wl-dock"));
+    {
+        QLocalSocket socket;
+        socket.connectToServer(socketPath);
+        if (socket.waitForConnected(200)) {
+            QTextStream(stderr)
+                << QStringLiteral("wl-dock is already running. Exiting.\n");
+            return 1;
+        }
+        // 清理上次崩溃残留的 socket 文件
+        QLocalServer::removeServer(socketPath);
+    }
+    QLocalServer singleInstanceServer;
+    singleInstanceServer.listen(socketPath);
 
     DockController controller;
     if (!controller.init(defaultIconName)) {

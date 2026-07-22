@@ -1,0 +1,139 @@
+---
+# Qt 6 官方代码风格
+# 参考：https://wiki.qt.io/Qt_Coding_Style 与 qt/qtbase/.clang-format
+# 要点：
+#   - 4 空格缩进，禁止 Tab
+#   - 100 列宽度
+#   - Egyptian 风格大括号（开括号与控制语句同行）
+#   - 指针/引用符号紧贴变量名：Type *name、Type &name
+#   - 控制语句后有空格：if (、for (、while (、switch (
+#   - 函数调用无空格：func(args)
+#   - public:/private:/protected: 与 class 关键字对齐（缩进 -4）
+#   - 命名空间内容不缩进
+#   - 构造函数初始化列表在冒号后换行
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+# 缩进
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: None
+IndentCaseLabels: true
+IndentPPDirectives: None
+IndentWrappedFunctionNames: false
+IndentGotoLabels: false
+
+# 列宽与换行
+ColumnLimit: 100
+ReflowComments: true
+BreakStringLiterals: true
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+CompactNamespaces: false
+
+# 大括号
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# 对齐
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+
+# 短代码合并规则
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
+
+# 参数打包
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: true
+BinPackParameters: true
+
+# 指针与引用
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# 空格规则
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesBeforeTrailingComments: 1
+
+# include 排序
+IncludeBlocks: Regroup
+IncludeCategories:
+  # 对应文件的头文件（同名 .h）
+  - Regex: '^"[A-Za-z_]+\.h"'
+    Priority: 1
+  # 项目本地头文件
+  - Regex: '^"(sni/|).*"'
+    Priority: 2
+  # Qt 头文件
+  - Regex: '^<Q[A-Z].*'
+    Priority: 3
+  - Regex: '^<Qt[A-Z].*'
+    Priority: 3
+  # 系统头文件
+  - Regex: '^<.*'
+    Priority: 4
+IncludeIsMainRegex: '.*'
+SortIncludes: CaseInsensitive
+
+# 杂项
+Cpp11BracedListStyle: true
+FixNamespaceComments: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+---
+Language: ObjC
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+---
+Language: Proto
+BasedOnStyle: Google
+---
+Language: TextProto
+BasedOnStyle: Google

@@ -6,3 +6,4 @@ CMakeLists.txt.user
 /layer-shell*
 /qt6-wayland*
 /qtbase-opensource*
+/icons

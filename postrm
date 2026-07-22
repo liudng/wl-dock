@@ -1,0 +1,18 @@
+#!/bin/sh
+# 卸载后刷新 .desktop 数据库与图标缓存
+# DEB/RPM 通用：参数忽略，仅确保缓存刷新
+set -e
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+fi
+
+if command -v mandb >/dev/null 2>&1; then
+    mandb -q 2>/dev/null || true
+fi
+
+exit 0

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- 背景：对角线渐变，填满整个画布 -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1c22"/>
+      <stop offset="100%" stop-color="#0c0c10"/>
+    </linearGradient>
+    <!-- Dock 主体：垂直渐变 -->
+    <linearGradient id="dockBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#32323a"/>
+      <stop offset="100%" stop-color="#1c1c22"/>
+    </linearGradient>
+    <!-- 三个应用图标的渐变 -->
+    <linearGradient id="iconBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6bb8ff"/>
+      <stop offset="100%" stop-color="#3a8ee6"/>
+    </linearGradient>
+    <linearGradient id="iconOrange" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffb072"/>
+      <stop offset="100%" stop-color="#e6703a"/>
+    </linearGradient>
+    <linearGradient id="iconGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7be39a"/>
+      <stop offset="100%" stop-color="#3ab366"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景：圆角方块填满画布 -->
+  <rect width="128" height="128" rx="28" ry="28" fill="url(#bg)"/>
+
+  <!-- Dock 主体：垂直居中（y=42~90，中心 y=66 ≈ 画布中心 64） -->
+  <rect x="10" y="42" width="108" height="48" rx="14" ry="14"
+        fill="url(#dockBg)" stroke="#44444f" stroke-width="1"/>
+
+  <!-- 三个应用图标（蓝/橙/绿），等距排列 -->
+  <rect x="18" y="52" width="28" height="28" rx="7" ry="7" fill="url(#iconBlue)"/>
+  <rect x="50" y="52" width="28" height="28" rx="7" ry="7" fill="url(#iconOrange)"/>
+  <rect x="82" y="52" width="28" height="28" rx="7" ry="7" fill="url(#iconGreen)"/>
+
+  <!-- 活动窗口指示器（蓝色短横线，与 TaskButton 风格一致） -->
+  <rect x="26" y="82" width="12" height="3" rx="1.5" ry="1.5" fill="#50a0ff"/>
+</svg>

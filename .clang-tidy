@@ -1,0 +1,159 @@
+---
+# wl-dock clang-tidy 配置：现代化 C++20 风格
+#
+# 设计原则：
+#   1. 全面启用 modernize-*，将 C 风格代码升级为 C++20 现代写法
+#   2. 启用 cppcoreguidelines / bugprone / performance / readability 等核心检查
+#   3. 屏弃过时风格：禁用与现代 Qt6 + Wayland C interop 不兼容的检查
+#   4. 强制 Qt 命名约定（CamelCase 类、camelBack 方法、m_ 私有成员前缀）
+#
+# 与 Qt 项目兼容性考虑：
+#   - Qt 父子对象所有权机制与 gsl::owner 冲突 → 禁用 cppcoreguidelines-owning-data
+#   - Wayland 协议是 C 接口，需要 reinterpret_cast/指针运算 → 禁用相关 pro-type/pro-bounds
+#   - Qt 信号槽参数推导/隐式转换较多 → 禁用过严的 narrowing/hicpp 检查
+#   - main(argc, argv) 是 C 风格 → 禁用 array-to-pointer-decay
+Checks: >
+  -*,
+  modernize-*,
+  cppcoreguidelines-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  cert-*,
+  clang-analyzer-*,
+  hicpp-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -modernize-avoid-c-arrays,
+  -modernize-use-designated-initializers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-owning-data,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-slicing,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-exception-escape,
+  -bugprone-reserved-identifier,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -readability-else-after-return,
+  -readability-implicit-bool-conversion,
+  -readability-redundant-access-specifiers,
+  -readability-convert-member-functions-to-static,
+  -cert-err58-cpp,
+  -cert-err34-c,
+  -hicpp-no-array-decay,
+  -hicpp-no-magic-numbers,
+  -hicpp-vararg,
+  -hicpp-signed-bitwise,
+  -hicpp-no-assembler,
+  -performance-no-automatic-move,
+  -clang-analyzer-cplusplus.NewDelete,
+  -clang-analyzer-cplusplus.PlacementNew
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(src|src/.*)/.*\.h$'
+FormatStyle: file
+User: wl-dock
+CheckOptions:
+  # ─── Qt 命名约定 ───
+  # 类/结构体：CamelCase（ForeignToplevelManager、SniItem）
+  - key:   readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key:   readability-identifier-naming.StructCase
+    value: CamelCase
+  # 函数/方法：camelBack（iconForAppId、toplevelIds）
+  - key:   readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key:   readability-identifier-naming.MethodCase
+    value: camelBack
+  - key:   readability-identifier-naming.ClassMethodCase
+    value: camelBack
+  - key:   readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key:   readability-identifier-naming.ParameterPackCase
+    value: camelBack
+  # 变量：camelBack
+  - key:   readability-identifier-naming.VariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key:   readability-identifier-naming.GlobalVariableCase
+    value: camelBack
+  # 私有成员：m_ 前缀 + camelBack（m_resolver、m_defaultIconName）
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: camelBack
+  - key:   readability-identifier-naming.ProtectedMemberPrefix
+    value: 'm_'
+  - key:   readability-identifier-naming.ProtectedMemberCase
+    value: camelBack
+  - key:   readability-identifier-naming.PublicMemberCase
+    value: camelBack
+  # 常量：UPPER_CASE（WL_DOCK_VERSION、PROTO_XML）
+  - key:   readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key:   readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+  - key:   readability-identifier-naming.StaticConstantCase
+    value: UPPER_CASE
+  # 枚举：CamelCase 类型，CamelCase 枚举值
+  - key:   readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key:   readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key:   readability-identifier-naming.ScopedEnumConstantCase
+    value: CamelCase
+  # 命名空间：lower_case（不强制，保持与 Qt 一致）
+  - key:   readability-identifier-naming.NamespaceCase
+    value: lower_case
+  # 宏：UPPER_CASE（Q_LOGGING_CATEGORY、WL_DOCK_VERSION）
+  - key:   readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  # 类型别名/typedef：CamelCase
+  - key:   readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+
+  # ─── modernize 检查选项 ───
+  # use-default-member-init：允许 = 默认值风格
+  - key:   modernize-use-default-member-init.UseAssignment
+    value: '1'
+  # use-nullptr：将 NULL/0 转为 nullptr
+  - key:   modernize-use-nullptr.NullMacros
+    value: 'NULL,Q_NULL_POINTER'
+  # loop-convert：合理范围推断
+  - key:   modernize-loop-convert.MaxCopySize
+    value: '16'
+  # use-using：使用 using 替代 typedef
+  - key:   modernize-use-using.IgnoreMacros
+    value: '1'
+
+  # ─── readability 检查选项 ───
+  # 行长 100（与 .clang-format 一致）
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '30'
+  - key:   readability-identifier-naming.IgnoreMainLikeFunctions
+    value: '1'
+
+  # ─── bugprone 检查选项 ───
+  - key:   bugprone-assert-side-effect.CheckFunctionCalls
+    value: '0'
+
+  # ─── 性能检查 ───
+  - key:   performance-unnecessary-value-param.AllowedTypes
+    value: 'QString;QByteArray;QVariant;QIcon;QPixmap;QColor;QFont;QRect;QSize;QPoint;QUrl;QUuid'
+  - key:   performance-for-range-copy.AllowedTypes
+    value: 'QString;QByteArray;QVariant;QIcon;QPixmap;QColor;QFont;QRect;QSize;QPoint;QUrl;QUuid'

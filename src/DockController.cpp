@@ -48,7 +48,7 @@ bool DockController::init(const QString &defaultIconName)
     connect(qGuiApp, &QGuiApplication::screenAdded,
             this, &DockController::addScreen);
     connect(qGuiApp, &QGuiApplication::screenRemoved,
-            this, [this](QScreen *s) { removeScreen(s); });
+            this, &DockController::removeScreen);
 
     return true;
 }

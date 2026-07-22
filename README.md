@@ -2,7 +2,7 @@
 
 A lightweight Qt panel/taskbar designed specifically for wlroots-based Wayland compositors, using the layer-shell protocol to anchor the dock at the bottom of the screen.
 
-![wl-dock](wl-dock.png)
+![wl-dock](preview.png)
 
 ## Project Overview
 
@@ -133,6 +133,66 @@ QT_LOGGING_RULES="dock.sni.menu.popup=true" ./build/wl-dock
 ```
 
 Available categories include `dock.ctrl`, `dock.ftm` (foreign-toplevel), `dock.icon`, and `dock.sni.*` (tray subsystems).
+
+## Development
+
+`wl-dock` ships with `.clang-format`, `.clang-tidy`, and CMake sanitizer options to keep the codebase consistent and to catch bugs early during development.
+
+### Code Style
+
+[`.clang-format`](.clang-format) follows the official Qt 6 coding style: 4-space indentation, 100-column limit, Egyptian braces, `Type *name` pointer alignment, `public:`/`private:`/`protected:` aligned with the `class` keyword, and grouped include order (matching header → local → Qt → system).
+
+Format the whole project:
+
+```bash
+find src -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
+```
+
+### Static Analysis
+
+[`.clang-tidy`](.clang-tidy) enables modern C++20 checks (`modernize-*`, `cppcoreguidelines-*`, `bugprone-*`, `performance-*`, `readability-*`, `cert-*`, `clang-analyzer-*`, `hicpp-*`). Checks that conflict with Qt's ownership model or the Wayland C protocol are disabled. Qt naming conventions are enforced:
+
+- Classes/structs: `CamelCase` (e.g. `ForeignToplevelManager`)
+- Methods/functions: `camelBack` (e.g. `iconForAppId`)
+- Private/protected members: `m_` prefix + `camelBack` (e.g. `m_resolver`)
+- Constants/macros: `UPPER_CASE` (e.g. `WL_DOCK_VERSION`)
+- Enum types and values: `CamelCase`
+
+Run clang-tidy together with the compiler:
+
+```bash
+cmake -B build -D WL_DOCK_ENABLE_CLANG_TIDY=ON
+cmake --build build
+```
+
+Or run on a single translation unit:
+
+```bash
+clang-tidy -p build --config-file .clang-tidy src/main.cpp
+```
+
+### Sanitizers
+
+`wl-dock` supports AddressSanitizer (ASan), LeakSanitizer (LSan), and UndefinedBehaviorSanitizer (UBSan) to catch memory errors and undefined behavior during development.
+
+```bash
+cmake -B build -D WL_DOCK_ENABLE_SANITIZERS=ON
+cmake --build build
+
+# Run with leak detection enabled
+ASAN_OPTIONS=detect_leaks=1:abort_on_error=0 ./build/wl-dock
+```
+
+The option adds `-fsanitize=address,undefined,leak -fno-omit-frame-pointer -fno-common -g` to both compile and link flags. Only GCC and Clang are supported; other compilers will print a warning and skip the flags.
+
+The sanitizers can be combined with clang-tidy:
+
+```bash
+cmake -B build \
+    -D WL_DOCK_ENABLE_CLANG_TIDY=ON \
+    -D WL_DOCK_ENABLE_SANITIZERS=ON
+cmake --build build
+```
 
 ## Contributing and Discussion
 

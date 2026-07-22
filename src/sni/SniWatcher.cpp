@@ -3,6 +3,9 @@
 
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
+#include <QHash>      // qDeleteAll 需要
+#include <algorithm>  // std::ranges::find_if
+#include <ranges>
 
 
 static constexpr auto BUS_WATCHER = "org.kde.StatusNotifierWatcher";
@@ -17,8 +20,7 @@ SniWatcher::SniWatcher(QObject *parent)
 
 SniWatcher::~SniWatcher()
 {
-    for (auto it = m_items.begin(); it != m_items.end(); ++it)
-        delete it.value();
+    qDeleteAll(m_items);
     m_items.clear();
     if (m_registered) {
         QDBusConnection::sessionBus().unregisterObject(PATH_WATCHER);
@@ -80,11 +82,12 @@ void SniWatcher::RegisterStatusNotifierItem(const QString &service)
     }
 
     // 去重：同 service+path 不重复注册
-    for (auto it = m_items.constBegin(); it != m_items.constEnd(); ++it) {
-        if (it.value()->service() == name && it.value()->path() == path) {
-            qCWarning(logSni) << "Duplicate SNI registration ignored:" << service;
-            return;
-        }
+    const auto dup = std::ranges::find_if(m_items, [&](SniItem *item) {
+        return item->service() == name && item->path() == path;
+    });
+    if (dup != m_items.end()) {
+        qCWarning(logSni) << "Duplicate SNI registration ignored:" << service;
+        return;
     }
 
     qCInfo(logSni) << "SNI item registered:" << name << path;
@@ -110,25 +113,20 @@ void SniWatcher::RegisterStatusNotifierItem(const QString &service)
 void SniWatcher::onItemChanged(SniItem *self)
 {
     // 找到 id
-    for (auto it = m_items.constBegin(); it != m_items.constEnd(); ++it) {
-        if (it.value() == self) {
-            emit m_ui->itemChanged(it.key(), self->snapshot());
-            return;
-        }
-    }
+    const auto it = std::ranges::find_if(m_items, [self](SniItem *item) { return item == self; });
+    if (it != m_items.end())
+        emit m_ui->itemChanged(it.key(), self->snapshot());
 }
 
 void SniWatcher::onItemGone(SniItem *self)
 {
-    for (auto it = m_items.constBegin(); it != m_items.constEnd(); ++it) {
-        if (it.value() == self) {
-            const QUuid id = it.key();
-            const QString svc = self->service() + self->path();
-            m_items.erase(it);
-            delete self;
-            emit m_ui->itemRemoved(id);
-            emit StatusNotifierItemUnregistered(svc);
-            return;
-        }
-    }
+    const auto it = std::ranges::find_if(m_items, [self](SniItem *item) { return item == self; });
+    if (it == m_items.end()) return;
+
+    const QUuid id = it.key();
+    const QString svc = self->service() + self->path();
+    m_items.erase(it);
+    delete self;
+    emit m_ui->itemRemoved(id);
+    emit StatusNotifierItemUnregistered(svc);
 }

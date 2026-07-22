@@ -1,0 +1,127 @@
+.TH WL-DOCK 1 "2026-07-20" "wl-dock 0.5.0" "User Commands"
+.SH NAME
+wl-dock \- Wayland dock for wlroots-based compositors
+.SH SYNOPSIS
+.B wl-dock
+[\fIoptions\fR]
+.SH DESCRIPTION
+.B wl-dock
+is a lightweight dock for Wayland compositors implementing the
+wlr-layer-shell and wlr-foreign-toplevel-management protocols. It is
+primarily designed and tested against Labwc, but also works on sway,
+Hyprland and other wlroots-based compositors.
+.PP
+The dock shows one button per toplevel window with its application icon,
+a system tray area hosting SNI (StatusNotifierItem) hosts such as
+fcitx5, and a clock widget. Auto-hide on mouse leave is supported.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Show a brief usage summary and exit.
+.TP
+.BR \-v ", " \-\-version
+Print the program version and exit.
+.TP
+.BI \-\-icon\-theme " NAME"
+Override the icon theme used by
+.BR QIcon::fromTheme ().
+Useful when the desktop icon theme does not contain certain application
+icons; for example
+.BR "wl-dock --icon-theme Papirus" .
+.TP
+.BI \-\-default\-icon " NAME"
+Fallback icon name (a freedesktop icon theme entry) used when no
+.B .desktop
+file can be resolved for an
+.IR app_id .
+Defaults to
+.BR application-x-executable .
+.SH ENVIRONMENT
+.TP
+.B DISPLAY
+Ignored on Wayland; kept only for compatibility.
+.TP
+.B WAYLAND_DISPLAY
+The Wayland display socket to connect to. If unset, the default
+"wayland-0" is used.
+.TP
+.B XDG_DATA_HOME ", " XDG_DATA_DIRS
+Used to locate
+.B .desktop
+files and icons. See the
+.BR XDG Base Directory Specification .
+.TP
+.B DBUS_SESSION_BUS_ADDRESS
+The D-Bus session bus address used by the SNI tray host. The
+.B org.kde.StatusNotifierWatcher
+service is registered on this bus.
+.TP
+.B QT_LOGGING_RULES
+Enables per-category debug logging. Useful categories include:
+.RS
+.RS
+.IP \(bu 2
+.B dock.ctrl
+\(en DockController lifecycle
+.IP \(bu 2
+.B dock.ftm
+\(en foreign-toplevel manager events
+.IP \(bu 2
+.B dock.icon
+\(en .desktop / icon resolution
+.IP \(bu 2
+.B dock.window
+\(en DockWindow geometry / hide state
+.IP \(bu 2
+.B dock.sni
+\(en SNI watcher / item lifecycle
+.IP \(bu 2
+.B dock.sni.menu
+\(en DBusMenu rendering
+.IP \(bu 2
+.B dock.sni.menu.popup
+\(en SniMenu positioning / screen selection
+.RE
+.RE
+.PP
+Example:
+.PP
+.RS
+.EX
+QT_LOGGING_RULES="dock.sni=true;dock.icon=true" wl-dock
+.EE
+.RE
+.SH FILES
+.TP
+.I /usr/bin/wl-dock
+Executable.
+.TP
+.I /usr/share/applications/wl-dock.desktop
+Desktop entry.
+.TP
+.I /usr/share/icons/hicolor/scalable/apps/wl-dock.svg
+Application icon.
+.TP
+.I /usr/share/man/man1/wl-dock.1.gz
+This manual page.
+.SH EXIT STATUS
+.TP
+.B 0
+Normal exit (currently the dock runs until killed).
+.TP
+.B 1
+Initialisation failure, e.g. cannot connect to the Wayland display or
+the foreign-toplevel protocol is not supported by the compositor.
+.SH NOTES
+The dock is designed to run as a single instance per Wayland session.
+Multiple docks are created automatically in a multi-monitor setup, one
+per output.
+.SH BUGS
+Please report issues at the project repository.
+.SH AUTHOR
+The wl-dock project.
+.SH SEE ALSO
+.BR labwc (1),
+.BR sway (1),
+.BR hyprland (1),
+.BR wayland (7)
