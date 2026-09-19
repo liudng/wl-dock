@@ -20,8 +20,6 @@ void DockTip::showTip(QWidget *anchor, const QString &text)
         return;
     }
 
-    m_text = text;
-
     QFont f = font();
     f.setPointSize(10);
     setFont(f);
@@ -29,14 +27,28 @@ void DockTip::showTip(QWidget *anchor, const QString &text)
     const QFontMetrics fm(f);
     const int padX = 10;
     const int padY = 5;
-    const int textW = fm.horizontalAdvance(text);
-    const int textH = fm.height();
-    const int w = textW + padX * 2;
-    const int h = textH + padY * 2;
-    resize(w, h);
 
     // anchor 局部坐标 → dock（共同祖先）坐标，水平居中贴在按钮上方
     QWidget *dock = anchor->window();
+
+    // 文本过宽时省略：若 tooltip 宽于 dock 窗口，qBound 的上界
+    // dock->width() - w 会变负，触发 Q_ASSERT(!(max < min)) 崩溃。
+    // 注意：宽度恰好等于文本 advance 时 elidedText 也会因内部度量
+    // 差异误加省略号，因此只在真正超宽时才走省略路径。
+    int textW = fm.horizontalAdvance(text);
+    m_text = text;
+    if (dock) {
+        const int avail = qMax(0, dock->width() - padX * 2);
+        if (textW > avail) {
+            textW = avail;
+            m_text = fm.elidedText(text, Qt::ElideRight, avail);
+        }
+    }
+
+    const int w = textW + padX * 2;
+    const int h = fm.height() + padY * 2;
+    resize(w, h);
+
     const QPoint anchorTopCenter = anchor->mapTo(dock, QPoint(anchor->width() / 2, 0));
 
     int x = anchorTopCenter.x() - w / 2;
@@ -44,7 +56,7 @@ void DockTip::showTip(QWidget *anchor, const QString &text)
 
     // 不超出 dock 左右边界
     if (dock) {
-        x = qBound(0, x, dock->width() - w);
+        x = qBound(0, x, qMax(0, dock->width() - w));
         // 上方放不下就退到 anchor 下方
         if (y < 0)
             y = anchor->mapTo(dock, QPoint(0, anchor->height())).y() + 4;

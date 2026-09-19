@@ -18,6 +18,8 @@
 #include <QTimer>
 #include <QEnterEvent>
 #include <QEvent>
+#include <QMouseEvent>
+#include <QCursor>
 #include <QLoggingCategory>
 
 Q_LOGGING_CATEGORY(logDock, "dock.window", QtWarningMsg)
@@ -98,7 +100,13 @@ DockWindow::DockWindow(ForeignToplevelManager *manager, DesktopIconResolver *res
     m_hideTimer = new QTimer(this);
     m_hideTimer->setSingleShot(true);
     m_hideTimer->setInterval(HIDE_DELAY_MS);
-    connect(m_hideTimer, &QTimer::timeout, this, [this] { setHidden(true); });
+    connect(m_hideTimer, &QTimer::timeout, this, [this] {
+        // 超时后再确认一次鼠标位置：可能已回到内容区（如直接移入按钮，
+        // 事件由按钮接收，不产生 DockWindow 的 mouseMove），仍在外才隐藏
+        const QPoint pos = mapFromGlobal(QCursor::pos());
+        if (!rect().contains(pos) || !overContentBar(pos))
+            setHidden(true);
+    });
 
     const QList<quint32> ids = m_manager->toplevelIds();
     qCWarning(logDock) << "pre-populating" << ids.size() << "toplevels for screen"
@@ -159,13 +167,53 @@ void DockWindow::setHidden(bool hidden)
                        << (hidden ? HIDDEN_H : FULL_H);
 }
 
+// 鼠标 x（窗口坐标系）是否位于 dock 内容宽度范围内。
+// 隐藏时窗口是全屏宽的 1px 条带，需借助内容区（任务栏+托盘+时钟，
+// 左右各扩 6px，与 paintEvent 绘制范围一致）判定是否应该展开。
+bool DockWindow::withinContentX(qreal x) const
+{
+    const QRect content = m_taskManager->geometry().united(m_tray->geometry())
+                              .united(m_clock->geometry())
+                              .adjusted(-6, 0, 6, 0);
+    return x >= content.left() && x <= content.right() + 1;
+}
+
+// 显示状态下鼠标是否在可见内容条区域内。窗口顶部的 TIP_RESERVE 区域
+// 是为容纳 tooltip 而虚高的透明区（视觉上属于 dock 外部），鼠标越过
+// 内容条顶部（-2px，与 paintEvent 绘制范围一致）即视为移出 dock。
+bool DockWindow::overContentBar(const QPointF &pos) const
+{
+    const QRect content = m_taskManager->geometry().united(m_tray->geometry())
+                              .united(m_clock->geometry());
+    return withinContentX(pos.x()) && pos.y() >= content.top() - 2;
+}
+
 void DockWindow::enterEvent(QEnterEvent *e)
 {
     QWidget::enterEvent(e);
     qCWarning(logDock) << "dock Enter!";
     m_hideTimer->stop();
-    if (m_hidden)
+    if (m_hidden && withinContentX(e->position().x()))
         setHidden(false);
+}
+
+void DockWindow::mouseMoveEvent(QMouseEvent *e)
+{
+    QWidget::mouseMoveEvent(e);
+    if (m_hidden) {
+        // 隐藏状态下鼠标可能已在全宽条带内（enter 时不在内容范围未展开），
+        // 沿底边滑入内容宽度范围时再展开
+        if (withinContentX(e->position().x()))
+            setHidden(false);
+        return;
+    }
+    // 显示状态：鼠标移出可见内容条（两侧空白区域、上方 tooltip 预留区）
+    // 即准备隐藏；回到内容条范围内则取消隐藏
+    if (overContentBar(e->position())) {
+        m_hideTimer->stop();
+    } else if (!m_hideTimer->isActive()) {
+        m_hideTimer->start();
+    }
 }
 
 void DockWindow::leaveEvent(QEvent *e)
