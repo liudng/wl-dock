@@ -4,6 +4,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     build-essential \
     ccache \
     cmake \
+    file \
     ninja-build \
     pkgconf \
     qt6-base-dev \
